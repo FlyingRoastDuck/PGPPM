@@ -1,0 +1,301 @@
+# -*- coding: UTF-8 -*-
+import numpy as np
+import torch.optim as Optim
+from torch.autograd import Variable
+import torch
+from .evaluationMetrics import cmc, mean_ap
+from collections import OrderedDict
+import re
+import sys
+from loss import TripletLoss
+from dataReader import *
+import torch.utils.data as Data
+
+sys.path.append('../')
+
+from config import opt
+
+allFuncDes = {
+    'trainModel': '-----* training model with source data *-----',
+    'evaluate': '-----* Test Model Adaptation *-----'
+}
+
+
+def getSolver(solverType, model, **kwargs):
+    """
+    solver type
+    :param solverType:
+    :param model:
+    :param kwargs:
+    :return:
+    """
+    if solverType.lower() == 'adam':
+        print('-----* using adam solver *-----')
+        optimizer = Optim.Adam(model.parameters(), lr=kwargs['lr'], betas=kwargs['betas'])
+    elif solverType.lower() == 'sgd':
+        print('-----* using SGD solver *-----')
+        optimizer = Optim.SGD(model.parameters(), lr=kwargs['lr'], momentum=kwargs['momentum'],
+                              weight_decay=kwargs['weightDecay'])
+    else:
+        raise NotImplementedError
+    return optimizer
+
+
+def updateLR(optimizer, epoch, solverType='SGD', **kwargs):
+    """
+    update learning rate according to solverType
+    :param optimizer:
+    :param epoch:
+    :param solverType:
+    :param kwargs:
+    :return:
+    """
+    if solverType.lower() == 'adam':
+        if (epoch - int(0.8 * kwargs['maxEpoch'])) > 0:
+            lr = optimizer.param_groups[0]['lr']
+            lr -= lr / float(kwargs['maxEpoch'] - int(0.8 * kwargs['maxEpoch']))
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print("lr declined")
+    elif solverType.lower() == 'sgd':
+        if epoch % kwargs['decayFreq'] == kwargs['decayFreq'] - 1:
+            lr = optimizer.param_groups[0]['lr']
+            lr *= kwargs['lrDecay']
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print("lr declined")
+    else:
+        raise NotImplementedError
+
+
+def train(model, dataLoader, solverType='SGD', **kwargs):
+    """
+    train model with real and fake
+    :param model:
+    :param dataLoader:
+    :param knnReader:
+    :param solverType:
+    :param kwargs:
+    :return:
+    """
+    optimizer = getSolver(solverType, model, lr=kwargs['lr'], momentum=kwargs['momentum'],
+                          weightDecay=kwargs['weightDecay'], betas=kwargs['betas'])
+    # losses
+    idLoss = torch.nn.CrossEntropyLoss()
+    triLoss = TripletLoss(opt.margin)
+    for ii in range(kwargs['maxEpoch']):
+        updateLR(optimizer, ii, solverType=solverType, decayFreq=kwargs['decayFreq'], maxEpoch=kwargs['decayFreq'],
+                 lr=kwargs['lr'], lrDecay=kwargs['lrDecay'])
+        if ii < opt.startTrip:
+            for jj, (imgData, _, pid, _) in enumerate(dataLoader):
+                imgData = cpu2gpu(tensor2var(imgData))
+                pid = cpu2gpu(tensor2var(pid))
+                idScore, _ = model(imgData)
+                lossCls = idLoss(idScore, pid)
+                lossTri = 0
+                optimizer.zero_grad()
+                loss = lossCls
+                loss.backward()
+                optimizer.step()
+                if jj % kwargs['printFreq'] == 0:
+                    print('epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}'.format(epoch=ii,
+                                                                                                      maxEpoch=kwargs[
+                                                                                                          'maxEpoch'],
+                                                                                                      curJ=jj,
+                                                                                                      allJ=dataLoader.dataset.len // opt.batchSize,
+                                                                                                      idloss=lossCls))
+        else:
+            knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
+            for (jj, (imgData, _, pid, _)), (knnImg, _, pidKNN, _) in zip(enumerate(dataLoader), knnLoader):
+                knnImg = cpu2gpu(tensor2var(torch.cat(knnImg)))
+                pidKNN = cpu2gpu(tensor2var(torch.cat(pidKNN)))
+                imgData = cpu2gpu(tensor2var(imgData))
+                pid = cpu2gpu(tensor2var(pid))
+                idScore, _ = model(imgData)
+                _, tripEmb = model(knnImg)
+                # CAL LOSS
+                lossCls = idLoss(idScore, pid)
+                lossTri = triLoss(tripEmb, pidKNN)
+                # update
+                optimizer.zero_grad()
+                loss = lossCls + kwargs['lam'] * lossTri
+                loss.backward()
+                optimizer.step()
+                if jj % kwargs['printFreq'] == 0:
+                    print('epoch:{epoch}/{maxEpoch}, id loss:{idloss}, triplet loss:{triL}'.format(epoch=ii,
+                                                                                                   maxEpoch=kwargs[
+                                                                                                       'maxEpoch'],
+                                                                                                   idloss=lossCls,
+                                                                                                   triL=lossTri))
+        print('Epoch {} Done !'.format(ii))
+        if ii % kwargs['snap'] == 0:
+            # model.save()  # save snaps
+            import time
+            torch.save(model.state_dict(),
+                       'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
+            print('snapshots saved!')
+    # return new model
+    return model
+
+
+def extractCNNfeature(dataLoader, model):
+    model = model.train(False)
+    feat = np.zeros([dataLoader.dataset.len, 2048])  # pooling5 for comparison
+    allFnames = []
+    allCams, allIDs = np.zeros([dataLoader.dataset.len, 1]), np.zeros([dataLoader.dataset.len, 1])
+    for ii, (imgData, fnames, pid, cam) in enumerate(dataLoader):
+        imgData = cpu2gpu(tensor2var(imgData))
+        Feat = model(imgData, outType='pooling5')
+        index = 0
+        for (curFeat, curName, curPid, curCam) in zip(Feat, fnames, pid, cam):
+            feat[index] = curFeat.numpy()
+            allFnames.append(curName)
+            allCams[index], allIDs[index] = curCam.numpy(), curPid.numpy()
+            index += 1
+    print('Extraction Done...')
+    return allFnames, allIDs, allCams, feat
+
+
+def getKNNLoader(dstImgPath, model, **kwargs):
+    K, numPerson = kwargs["K"], kwargs["numPerson"]
+    featureSet = dataReader(dstImgPath, dataType='train')  # real image path
+    dataSet = dataReader(dstImgPath, dataType='test')  # for feature extraction
+    # gett loader
+    extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=2, pin_memory=True, shuffle=False)
+    # geiFeatures
+    allFnames, allIDs, allCams, feat = extractCNNfeature(extractLoader, model)
+    allKNN, disMat = knnIndex(feat, K, allCams)
+    print('Mining Done')
+    knnLoader = Data.DataLoader(
+        knnCameraReader(featureSet, transform=featureSet.pre, knnIndex=allKNN, distance=disMat),
+        batch_size=numPerson, shuffle=True, pin_memory=True, drop_last=True,
+        num_workers=2)
+    return knnLoader
+
+
+def knnIndex(feat, k1, camLabs):
+    feat = torch.from_numpy(feat)
+    allNum = feat.shape[0]
+    dist = pairwiseDis(feat, feat)
+    # let same cam to be large
+    camLabs = torch.from_numpy(camLabs).squeeze()
+    numDim = camLabs.shape[0]
+    camX, camY = camLabs.unsqueeze(1), camLabs.unsqueeze(0)
+    camX, camY = camX.expand((numDim, numDim)), camY.expand((numDim, numDim))
+    mask = camX.eq(camY)
+    calDis = dist.clone()
+    calDis[mask] = 100  # "big value", remove same camera
+    print('computing original distance')
+    del feat
+    initRank = np.argpartition(calDis.cpu().numpy(), range(1, k1 + 3))
+    allKNN = []
+    print('starting re_ranking')
+    for i in range(allNum):
+        # k-reciprocal neighbors
+        fkIndex = initRank[i, :k1 + 1]
+        bkIndex = initRank[fkIndex, :k1 + 1]
+        fi = np.where(bkIndex == i)[0]
+        kreIndex = fkIndex[fi]
+
+        kExpandIndex = np.unique(kreIndex)
+        allKNN.append(kExpandIndex)
+    return allKNN, calDis
+
+
+def extractF(dataLoader, model):
+    """
+    extract pooling 5 features for dataLoader
+    :param imgData:
+    :param model:
+    :return:
+    """
+    model = model.train(False)
+    feature = OrderedDict()
+    for ii, (imgData, fname, pid, cams) in enumerate(dataLoader):
+        for imgD, name in zip(imgData, fname):
+            imgD = cpu2gpu(tensor2var(imgD)).unsqueeze(0)
+            feature[name] = var2tensor(model(imgD, outType='pooling5'))
+    print('-----* Feature Obtained *-----')
+    return feature
+
+
+def pairwiseDis(qFeature, gFeature):
+    """
+    com pair wise distance
+    :param qFeature:
+    :param gFeature:
+    :return:
+    """
+    x, y = qFeature, gFeature
+    m, n = x.shape[0], y.shape[0]
+    disMat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
+             torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+    disMat.addmm_(1, -2, x, y.t())
+    print('-----* Distance Matrix has been computed*-----')
+    return disMat.clamp_(min=1e-12)
+
+
+def evaModel(disMat, qPID, gPID, qCam, gCam, cmcTop=(1, 5, 10, 20)):
+    mAP = mean_ap(disMat, qPID, gPID, qCam, gCam)
+    print('Mean AP: {:4.1%}'.format(mAP))
+    # cal CMC
+    cmcConfigs = dict(separate_camera_set=False,
+                      single_gallery_shot=False,
+                      first_match_break=True)
+    cmcScores = cmc(disMat, qPID, gPID, qCam, gCam, **cmcConfigs)
+    print('CMC Scores:')
+    for k in cmcTop:
+        print('  top-{:<4}{:12.1%}'.format(k, cmcScores[k - 1]))
+
+    return cmcScores[0]
+
+
+class Evaluator(object):
+    def __init__(self, model):
+        super(Evaluator, self).__init__()
+        self.model = model
+        self.pat = re.compile(r'([-\d]+)_c(\d)')
+
+    def evaluate(self, qLoader, gLoader):
+        qFeat = extractF(qLoader, self.model)
+        gFeat = extractF(gLoader, self.model)
+        disMat = pairwiseDis(qFeat, gFeat)
+        # getP PID and Cam
+        qPID = [int(self.pat.search(fname).groups()[0]) for fname in qFeat.keys()]
+        qCAM = [int(self.pat.search(fname).groups()[1]) for fname in qFeat.keys()]
+        gPID = [int(self.pat.search(fname).groups()[0]) for fname in gFeat.keys()]
+        gCAM = [int(self.pat.search(fname).groups()[1]) for fname in gFeat.keys()]
+        return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
+
+
+def var2tensor(var):
+    return var.data
+
+
+def tensor2var(val, grad=False):
+    return Variable(val, requires_grad=grad)
+
+
+def cpu2gpu(var):
+    return var.cuda() if opt.useGpu else var
+
+
+def gpu2cpu(var):
+    return var.cpu() if var.is_cuda else var
+
+
+def description(func):
+    """
+    decorator for main funcs
+    :param func:
+    :return:
+    """
+
+    def warpper(**kwargs):
+        if func.__name__ in allFuncDes.keys():
+            print(allFuncDes[func.__name__])
+        else:
+            raise NotImplementedError
+        func(**kwargs)
+
+    return warpper
