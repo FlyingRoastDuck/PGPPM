@@ -96,12 +96,8 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 if jj % kwargs['printFreq'] == 0:
                     print(
                         'epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}, elapsed time:{time}s'.format(
-                            epoch=ii,
-                            maxEpoch=kwargs['maxEpoch'],
-                            curJ=jj,
-                            allJ=len(dataLoader),
-                            idloss=lossCls,
-                            time=endT - startT))
+                            epoch=ii, maxEpoch=kwargs['maxEpoch'], curJ=jj, allJ=len(dataLoader),
+                            idloss=lossCls, time=endT - startT))
         else:
             knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
             for (jj, (imgData, _, pid, _)), (knnImg, _, pidKNN, _) in zip(enumerate(dataLoader), knnLoader):

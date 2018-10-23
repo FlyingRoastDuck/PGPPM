@@ -9,7 +9,7 @@ supported = ['resnet18', 'resnet34', 'resnet50']
 
 
 class modelFact(nn.Module):
-    def __init__(self, name, outChannel, embDim=2048):
+    def __init__(self, name, outChannel, embDim=1024):
         super(modelFact, self).__init__()
         self.modelName = name  # model name
         self.embDim = embDim  # for market, 2048

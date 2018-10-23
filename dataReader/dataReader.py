@@ -35,7 +35,7 @@ class dataReader(object):
         # throw info
         if dataType == 'train':
             self.preprocess = T.Compose([
-                T.RandomCrop(256, 128),
+                T.Resize([256, 128]),
                 T.RandomHorizontalFlip(),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -44,7 +44,7 @@ class dataReader(object):
                 '-----* Training with {total} images ({numID} classes) *-----'.format(total=self.len, numID=self.numID))
         elif dataType == 'test':
             self.preprocess = T.Compose([
-                T.Resize(256, 128),
+                T.Resize([256, 128]),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
