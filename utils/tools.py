@@ -141,14 +141,14 @@ def extractCNNfeature(dataLoader, model):
     feat = np.zeros([dataLoader.dataset.len, 2048])  # pooling5 for comparison
     allFnames = []
     allCams, allIDs = np.zeros([dataLoader.dataset.len, 1]), np.zeros([dataLoader.dataset.len, 1])
-    for ii, (imgData, fnames, pid, cam) in enumerate(dataLoader):
+    for imgData, fnames, pid, cam in dataLoader:
         imgData = cpu2gpu(tensor2var(imgData))
         Feat = model(imgData, outType='pooling5')
         index = 0
         for (curFeat, curName, curPid, curCam) in zip(Feat, fnames, pid, cam):
-            feat[index] = curFeat.numpy()
+            feat[index] = gpu2cpu(var2tensor(curFeat)).numpy()
             allFnames.append(curName)
-            allCams[index], allIDs[index] = curCam.numpy(), curPid.numpy()
+            allCams[index], allIDs[index] = gpu2cpu(var2tensor(curCam)).numpy(), gpu2cpu(var2tensor(curPid)).numpy()
             index += 1
     print('Extraction Done...')
     return allFnames, allIDs, allCams, feat
@@ -156,15 +156,14 @@ def extractCNNfeature(dataLoader, model):
 
 def getKNNLoader(dstImgPath, model, **kwargs):
     K, numPerson = kwargs["K"], kwargs["numPerson"]
-    featureSet = dataReader(dstImgPath, dataType='train')  # real image path
-    dataSet = dataReader(dstImgPath, dataType='test')  # for feature extraction
+    featureSet = dataReader(dstImgPath, dataType='train', show=False)  # real image path
+    dataSet = dataReader(dstImgPath, dataType='test', show=False)  # for feature extraction
     # get loader
-    extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=4, pin_memory=True, shuffle=False)
+    extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=opt.numWorker, pin_memory=True, shuffle=False)
     # geiFeatures
-    import ipdb
-    ipdb.set_trace()
     allFnames, allIDs, allCams, feat = extractCNNfeature(extractLoader, model)
     allKNN, disMat = knnIndex(feat, K, allCams)
+    import ipdb;ipdb.set_trace()
     print('Mining Done')
     knnLoader = Data.DataLoader(
         knnCameraReader(featureSet, transform=featureSet.preprocess, knnIndex=allKNN, distance=disMat),
@@ -188,7 +187,6 @@ def knnIndex(feat, k1, camLabs):
     del feat
     initRank = np.argpartition(calDis.cpu().numpy(), range(1, k1 + 3))
     allKNN = []
-    print('starting re_ranking')
     for i in range(allNum):
         # k-reciprocal neighbors
         fkIndex = initRank[i, :k1 + 1]

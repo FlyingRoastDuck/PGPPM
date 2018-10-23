@@ -28,7 +28,7 @@ class Config(object):
         self.lam = 1  # GP term
         self.useGpu = True  # gpu mode
         self.numWorker = 8  # thread
-        self.snapFreq = 20  # save freq
+        self.snapFreq = 60  # save freq
         self.printFreq = 1
 
     def parse(self, **kwargs):

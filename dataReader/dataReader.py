@@ -10,12 +10,13 @@ import torch
 class dataReader(object):
     def __getitem__(self, index):
         fname = self.allF[index]
-        return self.preprocess(Image.open(os.path.join(self.imgPath, fname))), fname, self.allIDs[index], self.allCams[index]
+        return self.preprocess(Image.open(os.path.join(self.imgPath, fname))), fname, self.allIDs[index], self.allCams[
+            index]
 
     def __len__(self):
         return self.len
 
-    def __init__(self, imgPath, dataType='train'):
+    def __init__(self, imgPath, dataType='train', show=True):
         allF = [fname for fname in os.listdir(imgPath) if fname[-3:].lower() in ['jpg', 'png']]
         self.allF = allF
         self.imgPath = imgPath
@@ -40,20 +41,22 @@ class dataReader(object):
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-            print(
-                '-----* Training with {total} images ({numID} classes) *-----'.format(total=self.len, numID=self.numID))
+            if show:
+                print(
+                    '-----* Training with {total} images ({numID} classes) *-----'.format(total=self.len,
+                                                                                          numID=self.numID))
         elif dataType == 'test':
             self.preprocess = T.Compose([
                 T.Resize([256, 128]),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-            print('-----* Testing with {total} images *-----'.format(total=self.len))
+            if show:
+                print('-----* Testing with {total} images *-----'.format(total=self.len))
 
 
 class knnCameraReader(object):
     def __init__(self, dataset, transform=None, knnIndex=None, distance=None):
-        allCams, allPids, allF = dataset.allCams, dataset.allIDs, dataset.allF
         self.dataset = dataset.trainSet
         self.root = dataset.imgPath
         self.transform = transform
@@ -125,7 +128,7 @@ class knnCameraReader(object):
 
                 maxName, _, _ = self.dataset[curKnnIndex[maxLoc]]
 
-                fpath = os.path.join(self.root, self.path_name, maxName)
+                fpath = os.path.join(self.root, maxName)
                 allImg.append(self.transform(Image.open(fpath).convert('RGB')))
                 allFname.append(maxName)
                 allPid.append(pid)
