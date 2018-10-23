@@ -11,7 +11,6 @@ class Config(object):
         self.modelSave = 'snapshots/PGPPM.pth'
         # basic param for model
         self.modelName = 'resnet50'
-        self.pretrain = 1
         self.lr = 0.01
         self.margin = 0.3
         self.beta1 = 0.5

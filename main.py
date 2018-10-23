@@ -16,7 +16,7 @@ def trainModel(**kwargs):
                              sampler=RandomIdentitySampler(dataset.trainSet, 4), drop_last=True, pin_memory=True)
     # init model and get teacher
     model = nn.DataParallel(cpu2gpu(
-        models.modelFact(name=opt.modelName, isInit=opt.pretrain, outChannel=dataset.numID, embDim=opt.fDim)))
+        models.modelFact(name=opt.modelName, outChannel=dataset.numID, embDim=opt.fDim)))
     # train model
     model = train(model, dataLoader=trainLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
                   printFreq=opt.printFreq, weightDecay=opt.weightDecay, momentum=opt.momentum, lam=opt.lam,
@@ -34,7 +34,7 @@ def evaluate(**kwargs):
     qReader = dataReader(opt.qFolder, dataType='test')
     tQLoader = DataLoader(qReader, batch_size=opt.batchSize, shuffle=True, num_workers=opt.numWorker)
     # load model
-    model = models.modelFact(name=opt.modelName, isInit=opt.pretrain, outChannel=dataReader(opt.imgFolder).numID,
+    model = models.modelFact(name=opt.modelName, outChannel=dataReader(opt.imgFolder).numID,
                              embDim=opt.fDim)
     model.load(opt.modelSave)
     model = cpu2gpu(model)

@@ -9,14 +9,14 @@ supported = ['resnet18', 'resnet34', 'resnet50']
 
 
 class modelFact(nn.Module):
-    def __init__(self, name, isInit, outChannel, embDim=2048):
+    def __init__(self, name, outChannel, embDim=2048):
         super(modelFact, self).__init__()
         self.modelName = name  # model name
         self.embDim = embDim  # for market, 2048
         if not self.modelName.lower() in supported:
             raise NotImplementedError
         else:
-            self.model = eval(name + '(pretrained=' + str(isInit) + ')')
+            self.model = eval(name + '(pretrained=True)')
             embFdim = self.model.fc.in_features  # 2048 in default
             # some layers
             self.model.feat = nn.Linear(embFdim, embDim)
