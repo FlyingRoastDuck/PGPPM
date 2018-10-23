@@ -39,25 +39,26 @@ class modelFact(nn.Module):
         # GMP
         x = F.max_pool2d(x, x.size()[2:])
         x = x.view(x.size(0), -1)
+        pool5 = x
         if outType == 'pooling5':
             return F.normalize(x)  # use normalized whole vec to eva
         else:
             out = self.model.featBN(self.model.feat(x))
             # sep 2 id and feat
-            idOut = self.model.fc(out)
-            return idOut, out
+            idOut = self.model.fc(F.relu(out))
+            return idOut, pool5
 
-    def save(self, path=None):
-        # save feature extractor is enough
-        saveList = self.model.state_dict()
-        if path is not None:
-            torch.save(saveList, path)
-        else:
-            torch.save(saveList, 'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
-
-    def load(self, path):
-        if path:
-            allParams = torch.load(path)
-            self.model.load_state_dict(allParams)
-        else:
-            raise RuntimeError
+    # def save(self, path=None):
+    #     # save feature extractor is enough
+    #     saveList = self.model.state_dict()
+    #     if path is not None:
+    #         torch.save(saveList, path)
+    #     else:
+    #         torch.save(saveList, 'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
+    #
+    # def load(self, path):
+    #     if path:
+    #         allParams = torch.load(path)
+    #         self.model.load_state_dict(allParams)
+    #     else:
+    #         raise RuntimeError

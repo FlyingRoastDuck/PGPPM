@@ -12,12 +12,13 @@ def trainModel(**kwargs):
     opt.parse(**kwargs)
     # init dataset
     dataset = dataReader(opt.imgFolder)  # fake images
-    dataLoader = DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=opt.numWorker)
+    trainLoader = DataLoader(dataset, batch_size=opt.batchSize, num_workers=opt.numWorker,
+                             sampler=RandomIdentitySampler(dataset.trainSet, 4), drop_last=True, pin_memory=True)
     # init model and get teacher
     model = nn.DataParallel(cpu2gpu(
         models.modelFact(name=opt.modelName, isInit=opt.pretrain, outChannel=dataset.numID, embDim=opt.fDim)))
     # train model
-    model = train(model, dataLoader=dataLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
+    model = train(model, dataLoader=trainLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
                   printFreq=opt.printFreq, weightDecay=opt.weightDecay, momentum=opt.momentum, lam=opt.lam,
                   decayFreq=opt.decayFreq, lrDecay=opt.lrDecay, betas=[opt.beta1, opt.beta2])
     # model.save(opt.modelSave)

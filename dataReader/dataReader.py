@@ -8,7 +8,7 @@ import torch
 import torch.utils.data as Data
 
 
-class dataReader(Data.Dataset):
+class dataReader(object):
     def __getitem__(self, index):
         fname = self.allF[index]
         return self.preprocess(Image.open(os.path.join(self.imgPath, fname))), fname, self.allIDs[index], self.allCams[index]
@@ -31,6 +31,8 @@ class dataReader(Data.Dataset):
         self.allCams = allCams
         self.numID = len(np.unique(allIDs))
         self.preprocess = None
+        self.trainSet = []
+        [self.trainSet.append([allF[i], allIDs[i], allCams[i]]) for i in range(len(allF))]
         # throw info
         if dataType == 'train':
             self.preprocess = T.Compose([
@@ -50,11 +52,10 @@ class dataReader(Data.Dataset):
             print('-----* Testing with {total} images *-----'.format(total=self.len))
 
 
-class knnCameraReader(Data.Dataset):
+class knnCameraReader(object):
     def __init__(self, dataset, transform=None, knnIndex=None, distance=None):
         allCams, allPids, allF = dataset.allCams, dataset.allIDs, dataset.allF
-        self.dataset = []
-        [self.dataset.append([allF[i], allPids[i], allCams[i]]) for i in range(len(allF))]
+        self.dataset = dataset.trainSet
         self.root = dataset.imgPath
         self.transform = transform
         self.knn_index = knnIndex

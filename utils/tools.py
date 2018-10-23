@@ -5,7 +5,6 @@ from torch.autograd import Variable
 import torch
 from .evaluationMetrics import cmc, mean_ap
 from collections import OrderedDict
-import re
 import sys
 from loss import TripletLoss
 from dataReader import *
@@ -86,13 +85,14 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
     for ii in range(kwargs['maxEpoch']):
         updateLR(optimizer, ii, solverType=solverType, decayFreq=kwargs['decayFreq'], maxEpoch=kwargs['decayFreq'],
                  lr=kwargs['lr'], lrDecay=kwargs['lrDecay'])
+        import time
+        startT = time.time()
         if ii < opt.startTrip:
             for jj, (imgData, _, pid, _) in enumerate(dataLoader):
                 imgData = cpu2gpu(tensor2var(imgData))
                 pid = cpu2gpu(tensor2var(pid))
                 idScore, _ = model(imgData)
                 lossCls = idLoss(idScore, pid)
-                lossTri = 0
                 optimizer.zero_grad()
                 loss = lossCls
                 loss.backward()
@@ -102,7 +102,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                                                                                                       maxEpoch=kwargs[
                                                                                                           'maxEpoch'],
                                                                                                       curJ=jj,
-                                                                                                      allJ=dataLoader.dataset.len // opt.batchSize,
+                                                                                                      allJ=len(dataLoader.dataset),
                                                                                                       idloss=lossCls))
         else:
             knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
@@ -122,12 +122,17 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 loss.backward()
                 optimizer.step()
                 if jj % kwargs['printFreq'] == 0:
-                    print('epoch:{epoch}/{maxEpoch}, id loss:{idloss}, triplet loss:{triL}'.format(epoch=ii,
-                                                                                                   maxEpoch=kwargs[
-                                                                                                       'maxEpoch'],
-                                                                                                   idloss=lossCls,
-                                                                                                   triL=lossTri))
+                    print(
+                        'epoch:{epoch}/{maxEpoch},Round:[{curJ}/{allJ}], , id loss:{idloss}, triplet loss:{triL}'.format(
+                            epoch=ii,
+                            maxEpoch=kwargs['maxEpoch'],
+                            curJ=jj,
+                            allJ=len(dataLoader.dataset),
+                            idloss=lossCls,
+                            triL=lossTri))
         print('Epoch {} Done !'.format(ii))
+        endTime = time.time()
+        print('Elapsed Time: {}'.format((endTime - startT)))
         if ii % kwargs['snap'] == 0:
             # model.save()  # save snaps
             import time
@@ -160,16 +165,15 @@ def getKNNLoader(dstImgPath, model, **kwargs):
     K, numPerson = kwargs["K"], kwargs["numPerson"]
     featureSet = dataReader(dstImgPath, dataType='train')  # real image path
     dataSet = dataReader(dstImgPath, dataType='test')  # for feature extraction
-    # gett loader
-    extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=2, pin_memory=True, shuffle=False)
+    # get loader
+    extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=4, pin_memory=True, shuffle=False)
     # geiFeatures
     allFnames, allIDs, allCams, feat = extractCNNfeature(extractLoader, model)
     allKNN, disMat = knnIndex(feat, K, allCams)
     print('Mining Done')
     knnLoader = Data.DataLoader(
-        knnCameraReader(featureSet, transform=featureSet.pre, knnIndex=allKNN, distance=disMat),
-        batch_size=numPerson, shuffle=True, pin_memory=True, drop_last=True,
-        num_workers=2)
+        knnCameraReader(featureSet, transform=featureSet.preprocess, knnIndex=allKNN, distance=disMat),
+        batch_size=numPerson, shuffle=True, pin_memory=True, drop_last=True, num_workers=4)
     return knnLoader
 
 
