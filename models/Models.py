@@ -19,17 +19,17 @@ class modelFact(nn.Module):
             self.model = eval(name + '(pretrained=True)')
             embFdim = self.model.fc.in_features  # 2048 in default
             # some layers
-            self.model.feat = nn.Linear(embFdim, embDim)
-            self.model.featBN = nn.BatchNorm1d(embDim)
-            nn.init.kaiming_normal_(self.model.feat.weight, mode='fan_out')
-            nn.init.constant_(self.model.feat.bias, 0)
-            nn.init.constant_(self.model.featBN.weight, 1)
-            nn.init.constant_(self.model.featBN.bias, 0)
+            self.feat = nn.Linear(embFdim, embDim)
+            self.featBN = nn.BatchNorm1d(embDim)
+            nn.init.kaiming_normal_(self.feat.weight, mode='fan_out')
+            nn.init.constant_(self.feat.bias, 0)
+            nn.init.constant_(self.featBN.weight, 1)
+            nn.init.constant_(self.featBN.bias, 0)
             # for ID prediction
-            self.model.fc = nn.Linear(embDim, outChannel)
-            self.model.drop = nn.Dropout(0.5)
-            nn.init.normal_(self.model.fc.weight, std=0.001)
-            nn.init.constant_(self.model.fc.bias, 0)
+            self.fc = nn.Linear(embDim, outChannel)
+            self.drop = nn.Dropout(0.5)
+            nn.init.normal_(self.fc.weight, std=0.001)
+            nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x, outType='normal'):
         # forward 2 avgpool
@@ -44,9 +44,9 @@ class modelFact(nn.Module):
         if outType == 'pooling5':
             return F.normalize(x)  # use normalized whole vec to eva
         else:
-            out = self.model.featBN(self.model.feat(x))
+            out = self.featBN(self.feat(x))
             # sep 2 id and feat
-            idOut = self.model.drop(self.model.fc(F.relu(out)))
+            idOut = self.fc(self.drop(F.relu(out)))
             return idOut, pool5
 
     # def save(self, path=None):
