@@ -30,7 +30,7 @@ class Config(object):
         self.useGpu = True  # gpu mode
         self.numWorker = 8  # thread
         self.snapFreq = 20  # save freq
-        self.printFreq = 20
+        self.printFreq = 10
 
     def parse(self, **kwargs):
         # user's config

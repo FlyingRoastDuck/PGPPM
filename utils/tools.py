@@ -2,7 +2,7 @@
 import numpy as np
 import torch.optim as Optim
 from torch.autograd import Variable
-import torch
+import time
 from .evaluationMetrics import cmc, mean_ap
 from collections import OrderedDict
 import sys
@@ -85,10 +85,9 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
     for ii in range(kwargs['maxEpoch']):
         updateLR(optimizer, ii, solverType=solverType, decayFreq=kwargs['decayFreq'], maxEpoch=kwargs['decayFreq'],
                  lr=kwargs['lr'], lrDecay=kwargs['lrDecay'])
-        import time
-        startT = time.time()
         if ii < opt.startTrip:
             for jj, (imgData, _, pid, _) in enumerate(dataLoader):
+                startT = time.time()
                 imgData = cpu2gpu(tensor2var(imgData))
                 pid = cpu2gpu(tensor2var(pid))
                 idScore, _ = model(imgData)
@@ -97,16 +96,21 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 loss = lossCls
                 loss.backward()
                 optimizer.step()
+                endT = time.time()
                 if jj % kwargs['printFreq'] == 0:
-                    print('epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}'.format(epoch=ii,
-                                                                                                      maxEpoch=kwargs[
-                                                                                                          'maxEpoch'],
-                                                                                                      curJ=jj,
-                                                                                                      allJ=len(dataLoader.dataset),
-                                                                                                      idloss=lossCls))
+                    print(
+                        'epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}, elapsed time:{time}s'.format(
+                            epoch=ii,
+                            maxEpoch=kwargs['maxEpoch'],
+                            curJ=jj,
+                            allJ=len(dataLoader),
+                            idloss=lossCls,
+                            time=endT - startT))
         else:
+            import ipdb;ipdb.set_trace()
             knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
             for (jj, (imgData, _, pid, _)), (knnImg, _, pidKNN, _) in zip(enumerate(dataLoader), knnLoader):
+                startT = time.time()
                 knnImg = cpu2gpu(tensor2var(torch.cat(knnImg)))
                 pidKNN = cpu2gpu(tensor2var(torch.cat(pidKNN)))
                 imgData = cpu2gpu(tensor2var(imgData))
@@ -121,21 +125,19 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 loss = lossCls + kwargs['lam'] * lossTri
                 loss.backward()
                 optimizer.step()
+                endT = time.time()
                 if jj % kwargs['printFreq'] == 0:
                     print(
-                        'epoch:{epoch}/{maxEpoch},Round:[{curJ}/{allJ}], , id loss:{idloss}, triplet loss:{triL}'.format(
+                        'epoch:{epoch}/{maxEpoch},Round:[{curJ}/{allJ}], , id loss:{idloss}, triplet loss:{triL}, elapsed time:{time}s'.format(
                             epoch=ii,
                             maxEpoch=kwargs['maxEpoch'],
                             curJ=jj,
-                            allJ=len(dataLoader.dataset),
+                            allJ=len(dataLoader),
                             idloss=lossCls,
-                            triL=lossTri))
+                            triL=lossTri, time=endT - startT))
         print('Epoch {} Done !'.format(ii))
-        endTime = time.time()
-        print('Elapsed Time: {}'.format((endTime - startT)))
         if ii % kwargs['snap'] == 0:
             # model.save()  # save snaps
-            import time
             torch.save(model.state_dict(),
                        'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
             print('snapshots saved!')
