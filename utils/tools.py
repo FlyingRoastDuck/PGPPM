@@ -77,6 +77,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
     # losses
     idLoss = torch.nn.CrossEntropyLoss()
     triLoss = TripletLoss(opt.margin)
+    model = model.train(True)
     for ii in range(kwargs['maxEpoch']):
         updateLR(optimizer, ii, solverType=solverType, decayFreq=kwargs['decayFreq'], maxEpoch=kwargs['decayFreq'],
                  lr=kwargs['lr'], lrDecay=kwargs['lrDecay'])
