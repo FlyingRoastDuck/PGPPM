@@ -32,9 +32,8 @@ def getSolver(solverType, model, **kwargs):
         print('-----* using adam solver *-----')
         optimizer = Optim.Adam(model.parameters(), lr=kwargs['lr'], betas=kwargs['betas'])
     elif solverType.lower() == 'sgd':
-        print('-----* using SGD solver *-----')
         optimizer = Optim.SGD(model.parameters(), lr=kwargs['lr'], momentum=kwargs['momentum'],
-                              weight_decay=kwargs['weightDecay'])
+                              weight_decay=kwargs['weightDecay'], nesterov=True)
     else:
         raise NotImplementedError
     return optimizer
@@ -57,11 +56,9 @@ def updateLR(optimizer, epoch, solverType='SGD', **kwargs):
                 param_group['lr'] = lr
             print("lr declined")
     elif solverType.lower() == 'sgd':
-        if epoch % kwargs['decayFreq'] == kwargs['decayFreq'] - 1:
-            lr = opt.lr * (0.1 ** (epoch // opt.batchSize))
-            for g in optimizer.param_groups:
-                g['lr'] = lr * kwargs['lrDecay']
-            print("lr declined")
+        curLR = opt.lr * (kwargs['lrDecay'] ** (epoch // opt.startTrip))
+        for g in optimizer.param_groups:
+            g['lr'] = curLR
     else:
         raise NotImplementedError
 
@@ -71,7 +68,6 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
     train model with real and fake
     :param model:
     :param dataLoader:
-    :param knnReader:
     :param solverType:
     :param kwargs:
     :return:
@@ -106,8 +102,6 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                             idloss=lossCls,
                             time=endT - startT))
         else:
-            import ipdb;
-            ipdb.set_trace()
             knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
             for (jj, (imgData, _, pid, _)), (knnImg, _, pidKNN, _) in zip(enumerate(dataLoader), knnLoader):
                 startT = time.time()
@@ -170,6 +164,8 @@ def getKNNLoader(dstImgPath, model, **kwargs):
     # get loader
     extractLoader = Data.DataLoader(dataSet, batch_size=128, num_workers=4, pin_memory=True, shuffle=False)
     # geiFeatures
+    import ipdb
+    ipdb.set_trace()
     allFnames, allIDs, allCams, feat = extractCNNfeature(extractLoader, model)
     allKNN, disMat = knnIndex(feat, K, allCams)
     print('Mining Done')

@@ -27,6 +27,7 @@ class modelFact(nn.Module):
             nn.init.constant_(self.model.featBN.bias, 0)
             # for ID prediction
             self.model.fc = nn.Linear(embDim, outChannel)
+            self.model.drop = nn.Dropout(0.5)
             nn.init.normal_(self.model.fc.weight, std=0.001)
             nn.init.constant_(self.model.fc.bias, 0)
 
@@ -45,7 +46,7 @@ class modelFact(nn.Module):
         else:
             out = self.model.featBN(self.model.feat(x))
             # sep 2 id and feat
-            idOut = self.model.fc(F.relu(out))
+            idOut = self.model.drop(self.model.fc(F.relu(out)))
             return idOut, pool5
 
     # def save(self, path=None):

@@ -12,7 +12,7 @@ class Config(object):
         # basic param for model
         self.modelName = 'resnet50'
         self.pretrain = 1
-        self.lr = 0.1
+        self.lr = 0.01
         self.margin = 0.3
         self.beta1 = 0.5
         self.beta2 = 0.999
