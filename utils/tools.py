@@ -51,17 +51,16 @@ def updateLR(optimizer, epoch, solverType='SGD', **kwargs):
     """
     if solverType.lower() == 'adam':
         if (epoch - int(0.8 * kwargs['maxEpoch'])) > 0:
-            lr = optimizer.param_groups[0]['lr']
+            lr = opt.lr
             lr -= lr / float(kwargs['maxEpoch'] - int(0.8 * kwargs['maxEpoch']))
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
             print("lr declined")
     elif solverType.lower() == 'sgd':
         if epoch % kwargs['decayFreq'] == kwargs['decayFreq'] - 1:
-            lr = optimizer.param_groups[0]['lr']
-            lr *= kwargs['lrDecay']
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
+            lr = opt.lr * (0.1 ** (epoch // opt.batchSize))
+            for g in optimizer.param_groups:
+                g['lr'] = lr * kwargs['lrDecay']
             print("lr declined")
     else:
         raise NotImplementedError
@@ -107,7 +106,8 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                             idloss=lossCls,
                             time=endT - startT))
         else:
-            import ipdb;ipdb.set_trace()
+            import ipdb;
+            ipdb.set_trace()
             knnLoader = getKNNLoader(opt.realTrainFolder, model, numPerson=opt.triBatch, K=opt.K)
             for (jj, (imgData, _, pid, _)), (knnImg, _, pidKNN, _) in zip(enumerate(dataLoader), knnLoader):
                 startT = time.time()

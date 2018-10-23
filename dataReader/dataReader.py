@@ -5,7 +5,6 @@ import re
 import torchvision.transforms as T
 import numpy as np
 import torch
-import torch.utils.data as Data
 
 
 class dataReader(object):
