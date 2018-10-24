@@ -110,7 +110,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 _, tripEmb = model(knnImg)
                 # CAL LOSS
                 lossCls = idLoss(idScore, pid)
-                lossTri = triLoss(tripEmb, pidKNN)
+                lossTri, precTri = triLoss(tripEmb, pidKNN)
                 # update
                 optimizer.zero_grad()
                 loss = lossCls + kwargs['lam'] * lossTri
@@ -140,16 +140,19 @@ def extractCNNfeature(dataLoader, model):
     model = model.train(False)
     feat = np.zeros([dataLoader.dataset.len, 2048])  # pooling5 for comparison
     allFnames = []
+    index = 0
     allCams, allIDs = np.zeros([dataLoader.dataset.len, 1]), np.zeros([dataLoader.dataset.len, 1])
     for imgData, fnames, pid, cam in dataLoader:
+        startT = time.time()
         imgData = cpu2gpu(tensor2var(imgData))
         Feat = model(imgData, outType='pooling5')
-        index = 0
         for (curFeat, curName, curPid, curCam) in zip(Feat, fnames, pid, cam):
             feat[index] = gpu2cpu(var2tensor(curFeat)).numpy()
             allFnames.append(curName)
             allCams[index], allIDs[index] = gpu2cpu(var2tensor(curCam)).numpy(), gpu2cpu(var2tensor(curPid)).numpy()
             index += 1
+        endT = time.time()
+        print('Extracting... Time:{time}'.format(time=endT - startT))
     print('Extraction Done...')
     return allFnames, allIDs, allCams, feat
 
@@ -163,7 +166,6 @@ def getKNNLoader(dstImgPath, model, **kwargs):
     # geiFeatures
     allFnames, allIDs, allCams, feat = extractCNNfeature(extractLoader, model)
     allKNN, disMat = knnIndex(feat, K, allCams)
-    import ipdb;ipdb.set_trace()
     print('Mining Done')
     knnLoader = Data.DataLoader(
         knnCameraReader(featureSet, transform=featureSet.preprocess, knnIndex=allKNN, distance=disMat),
@@ -171,7 +173,7 @@ def getKNNLoader(dstImgPath, model, **kwargs):
     return knnLoader
 
 
-def knnIndex(feat, k1, camLabs):
+def knnIndex(feat, K, camLabs):
     feat = torch.from_numpy(feat)
     allNum = feat.shape[0]
     dist = pairwiseDis(feat, feat)
@@ -183,14 +185,13 @@ def knnIndex(feat, k1, camLabs):
     mask = camX.eq(camY)
     calDis = dist.clone()
     calDis[mask] = 100  # "big value", remove same camera
-    print('computing original distance')
     del feat
-    initRank = np.argpartition(calDis.cpu().numpy(), range(1, k1 + 3))
+    initRank = np.argpartition(calDis.cpu().numpy(), range(1, K + 3))
     allKNN = []
     for i in range(allNum):
         # k-reciprocal neighbors
-        fkIndex = initRank[i, :k1 + 1]
-        bkIndex = initRank[fkIndex, :k1 + 1]
+        fkIndex = initRank[i, :K + 1]
+        bkIndex = initRank[fkIndex, :K + 1]
         fi = np.where(bkIndex == i)[0]
         kreIndex = fkIndex[fi]
 

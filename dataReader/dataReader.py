@@ -60,7 +60,7 @@ class knnCameraReader(object):
         self.dataset = dataset.trainSet
         self.root = dataset.imgPath
         self.transform = transform
-        self.knn_index = knnIndex
+        self.knnIndex = knnIndex
         self.distance = distance  # neighbour similarity
 
     def __len__(self):
@@ -76,7 +76,7 @@ class knnCameraReader(object):
         weightDis = np.asarray([1e-16] * len(kRe))
         for ii in range(len(kRe)):
             curKre = kRe[ii]
-            chosenRe = self.knn_index[curKre]  # k-re's k-reciprocal,self not included
+            chosenRe = self.knnIndex[curKre]  # k-re's k-reciprocal,self not included
             chosenReDis = np.exp(-self.distance[curKre, chosenRe].numpy())  # k-re's k-reciprocal dist
             mask = np.asarray([x in chosenRe for x in kRe])  # in curKre's kRe? do not forget itself
             maskNN = np.asarray([x in kRe for x in chosenRe])  # in chosenRe's kRe?
@@ -104,10 +104,10 @@ class knnCameraReader(object):
             allPid.append(pid)
             allCam.append(camid)
 
-        if self.knn_index is not None:
-            curKnnIndex = self.knn_index[index]  # query's k-re
+        if self.knnIndex is not None:
+            curKnnIndex = self.knnIndex[index]  # query's k-re
             curKnnIndex = list(set(curKnnIndex) - set([index]))
-            if len(self.knn_index[index]) > 1:
+            if len(self.knnIndex[index]) > 1:
                 # compute weight for all k-re
                 curWeight = self.__getWeight(index, curKnnIndex)
                 # samples with max weight
