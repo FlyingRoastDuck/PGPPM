@@ -249,8 +249,8 @@ def evaModel(disMat, qPID, gPID, qCam, gCam, cmcTop=(1, 5, 10, 20)):
     return cmcScores[0]
 
 
-def calDisForEva(qFeat, gFeat):
-    x, y = torch.cat([qFeat[f] for f in qFeat.keys()]), torch.cat([gFeat[f] for f in gFeat.keys()])
+def calDisForEva(qFeat, gFeat, qID, gID):
+    x, y = torch.cat([qFeat[f].unsqueeze(0) for f in qID]), torch.cat([gFeat[f].unsqueeze(0) for f in gID])
     m, n = x.shape[0], y.shape[0]
     disMat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
              torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
@@ -268,12 +268,12 @@ class Evaluator(object):
     def evaluate(self, qLoader, gLoader):
         qFeat = extractF(qLoader, self.model)
         gFeat = extractF(gLoader, self.model)
-        disMat = calDisForEva(qFeat, gFeat)
         # getP PID and Cam
         qPID = [int(self.pat.search(fname).groups()[0]) for fname in qFeat.keys()]
         qCAM = [int(self.pat.search(fname).groups()[1]) for fname in qFeat.keys()]
         gPID = [int(self.pat.search(fname).groups()[0]) for fname in gFeat.keys()]
         gCAM = [int(self.pat.search(fname).groups()[1]) for fname in gFeat.keys()]
+        disMat = calDisForEva(qFeat, gFeat, qPID, gPID)
         return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
 
 

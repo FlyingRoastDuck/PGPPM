@@ -28,9 +28,9 @@ def trainModel(**kwargs):
 def evaluate(**kwargs):
     opt.parse(**kwargs)
     tReader = dataReader(opt.tFolder, dataType='test', show=False)
-    tLoader = DataLoader(tReader, batch_size=128, shuffle=True, num_workers=opt.numWorker)
+    tLoader = DataLoader(tReader, batch_size=128, shuffle=False, num_workers=opt.numWorker)
     qReader = dataReader(opt.qFolder, dataType='test', show=False)
-    tQLoader = DataLoader(qReader, batch_size=128, shuffle=True, num_workers=opt.numWorker)
+    tQLoader = DataLoader(qReader, batch_size=128, shuffle=False, num_workers=opt.numWorker)
     # load model
     model = nn.DataParallel(models.modelFact(name=opt.modelName, outChannel=dataReader(opt.imgFolder).numID,
                                              embDim=opt.fDim))
