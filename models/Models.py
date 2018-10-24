@@ -1,7 +1,5 @@
 # -*- coding: UTF-8 -*-
 from torchvision.models import *
-import time
-import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
@@ -19,17 +17,17 @@ class modelFact(nn.Module):
             self.model = eval(name + '(pretrained=True)')
             embFdim = self.model.fc.in_features  # 2048 in default
             # some layers
-            self.feat = nn.Linear(embFdim, embDim)
-            self.featBN = nn.BatchNorm1d(embDim)
-            nn.init.kaiming_normal_(self.feat.weight, mode='fan_out')
-            nn.init.constant_(self.feat.bias, 0)
-            nn.init.constant_(self.featBN.weight, 1)
-            nn.init.constant_(self.featBN.bias, 0)
+            self.model.feat = nn.Linear(embFdim, embDim)
+            self.model.featBN = nn.BatchNorm1d(embDim)
+            nn.init.kaiming_normal_(self.model.feat.weight, mode='fan_out')
+            nn.init.constant_(self.model.feat.bias, 0)
+            nn.init.constant_(self.model.featBN.weight, 1)
+            nn.init.constant_(self.model.featBN.bias, 0)
             # for ID prediction
-            self.fc = nn.Linear(embDim, outChannel)
-            self.drop = nn.Dropout(0.5)
-            nn.init.normal_(self.fc.weight, std=0.001)
-            nn.init.constant_(self.fc.bias, 0)
+            self.model.fc = nn.Linear(embDim, outChannel)
+            self.model.drop = nn.Dropout(0.5)
+            nn.init.normal_(self.model.fc.weight, std=0.001)
+            nn.init.constant_(self.model.fc.bias, 0)
 
     def forward(self, x, outType='normal'):
         # forward 2 avgpool
@@ -44,22 +42,7 @@ class modelFact(nn.Module):
         if outType == 'pooling5':
             return F.normalize(x)  # use normalized whole vec to eva
         else:
-            out = self.featBN(self.feat(x))
+            out = self.model.featBN(self.model.feat(x))
             # sep 2 id and feat
-            idOut = self.fc(self.drop(F.relu(out)))
+            idOut = self.model.fc(self.model.drop(F.relu(out)))
             return idOut, pool5
-
-    # def save(self, path=None):
-    #     # save feature extractor is enough
-    #     saveList = self.model.state_dict()
-    #     if path is not None:
-    #         torch.save(saveList, path)
-    #     else:
-    #         torch.save(saveList, 'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
-
-    def load(self, path):
-        if path:
-            allParams = torch.load(path)
-            self.load_state_dict(allParams)
-        else:
-            raise RuntimeError

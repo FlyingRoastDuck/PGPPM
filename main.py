@@ -21,8 +21,6 @@ def trainModel(**kwargs):
     model = train(model, dataLoader=trainLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
                   printFreq=opt.printFreq, weightDecay=opt.weightDecay, momentum=opt.momentum, lam=opt.lam,
                   decayFreq=opt.decayFreq, lrDecay=opt.lrDecay, betas=[opt.beta1, opt.beta2])
-    # model.save(opt.modelSave)
-    torch.save(model.state_dict(), opt.modelSave)
     print('training done')
 
 
@@ -34,9 +32,9 @@ def evaluate(**kwargs):
     qReader = dataReader(opt.qFolder, dataType='test')
     tQLoader = DataLoader(qReader, batch_size=opt.batchSize, shuffle=True, num_workers=opt.numWorker)
     # load model
-    model = models.modelFact(name=opt.modelName, outChannel=dataReader(opt.imgFolder).numID,
-                             embDim=opt.fDim)
-    model.load(opt.modelSave)
+    model = nn.DataParallel(models.modelFact(name=opt.modelName, outChannel=dataReader(opt.imgFolder).numID,
+                                             embDim=opt.fDim))
+    model.load_state_dict(torch.load(opt.modelSave))
     model = cpu2gpu(model)
     # eva
     eva = Evaluator(model)

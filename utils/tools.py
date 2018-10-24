@@ -133,6 +133,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                        'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
             print('snapshots saved!')
     # return new model
+    torch.save(model.state_dict(), opt.modelSave)
     return model
 
 
