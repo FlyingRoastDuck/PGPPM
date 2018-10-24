@@ -249,6 +249,16 @@ def evaModel(disMat, qPID, gPID, qCam, gCam, cmcTop=(1, 5, 10, 20)):
     return cmcScores[0]
 
 
+def calDisForEva(qFeat, gFeat):
+    x, y = torch.cat([qFeat[f] for f in qFeat.keys()]), torch.cat([gFeat[f] for f in gFeat.keys()])
+    m, n = x.shape[0], y.shape[0]
+    disMat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
+             torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+    disMat.addmm_(1, -2, x, y.t())
+    print('Distance Matrix for Evaluation has been computed')
+    return disMat.clamp_(min=1e-12)
+
+
 class Evaluator(object):
     def __init__(self, model):
         super(Evaluator, self).__init__()
@@ -258,7 +268,7 @@ class Evaluator(object):
     def evaluate(self, qLoader, gLoader):
         qFeat = extractF(qLoader, self.model)
         gFeat = extractF(gLoader, self.model)
-        disMat = pairwiseDis(qFeat, gFeat)
+        disMat = calDisForEva(qFeat, gFeat)
         # getP PID and Cam
         qPID = [int(self.pat.search(fname).groups()[0]) for fname in qFeat.keys()]
         qCAM = [int(self.pat.search(fname).groups()[1]) for fname in qFeat.keys()]
