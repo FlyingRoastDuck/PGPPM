@@ -56,10 +56,10 @@ class modelFact(nn.Module):
     #         torch.save(saveList, path)
     #     else:
     #         torch.save(saveList, 'snapshots/' + time.strftime('%b_%d_%H:%M:%S', time.localtime(time.time())) + '.pth')
-    #
-    # def load(self, path):
-    #     if path:
-    #         allParams = torch.load(path)
-    #         self.model.load_state_dict(allParams)
-    #     else:
-    #         raise RuntimeError
+
+    def load(self, path):
+        if path:
+            allParams = torch.load(path)
+            self.load_state_dict(allParams)
+        else:
+            raise RuntimeError
