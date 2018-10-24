@@ -152,8 +152,8 @@ def extractCNNfeature(dataLoader, model):
             allCams[index], allIDs[index] = gpu2cpu(var2tensor(curCam)).numpy(), gpu2cpu(var2tensor(curPid)).numpy()
             index += 1
         endT = time.time()
-        print('Extracting... Time:{time}'.format(time=endT - startT))
-    print('Extraction Done...')
+        print('Extracting Features... Time:{time}s'.format(time=endT - startT))
+    print('Done!')
     return allFnames, allIDs, allCams, feat
 
 
