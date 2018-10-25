@@ -269,12 +269,11 @@ class Evaluator(object):
         qFeat = extractF(qLoader, self.model)
         gFeat = extractF(gLoader, self.model)
         # getP PID and Cam
-        qPID = [int(pid) for _, pid, _ in qLoader.trainSet]
-        qCAM = [int(cam) for _, _, cam in qLoader.trainSet]
-        gPID = [int(pid) for _, pid, _ in gLoader.trainSet]
-        gCAM = [int(cam) for _, _, cam in gLoader.trainSet]
+        qPID = [int(pid) for _, pid, _ in qLoader.dataset.trainSet]
+        qCAM = [int(cam) for _, _, cam in qLoader.dataset.trainSet]
+        gPID = [int(pid) for _, pid, _ in gLoader.dataset.trainSet]
+        gCAM = [int(cam) for _, _, cam in gLoader.dataset.trainSet]
         disMat = calDisForEva(qFeat, gFeat)
-        import ipdb;ipdb.set_trace()
         return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
 
 
