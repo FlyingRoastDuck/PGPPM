@@ -2,7 +2,7 @@
 import os
 from PIL import Image
 import re
-import torchvision.transforms as T
+import utils.transforms as T
 import numpy as np
 import torch
 
@@ -36,7 +36,7 @@ class dataReader(object):
         # throw info
         if dataType == 'train':
             self.preprocess = T.Compose([
-                T.Resize([256, 128]),
+                T.RandomSizedCrop(256, 128),
                 T.RandomHorizontalFlip(),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -47,7 +47,7 @@ class dataReader(object):
                                                                                           numID=self.numID))
         elif dataType == 'test':
             self.preprocess = T.Compose([
-                T.Resize([256, 128]),
+                T.RectScale(256, 128),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
