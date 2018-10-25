@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 supported = {
-    'resnet18': tModels.resnet50,
+    'resnet18': tModels.resnet18,
     'resnet34': tModels.resnet34,
     'resnet50': tModels.resnet50
 }
@@ -18,7 +18,7 @@ class modelFact(nn.Module):
         if not self.modelName.lower() in supported.keys():
             raise NotImplementedError
         else:
-            self.model = supported[name](pretrained=True)
+            self.model = supported[name.lower()](pretrained=True)
             embFdim = self.model.fc.in_features  # 2048 in default
             # some layers
             self.feat = nn.Linear(embFdim, embDim)
@@ -40,7 +40,7 @@ class modelFact(nn.Module):
                 break
             x = module(x)
         # GMP
-        x = F.max_pool2d(x, x.size()[2:])
+        x = F.avg_pool2d(x, x.size()[2:])
         x = x.view(x.size(0), -1)
         pool5 = x
         if outType == 'pooling5':
