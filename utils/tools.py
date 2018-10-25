@@ -269,10 +269,10 @@ class Evaluator(object):
         qFeat = extractF(qLoader, self.model)
         gFeat = extractF(gLoader, self.model)
         # getP PID and Cam
-        qPID = [int(self.pat.search(fname).groups()[0]) for fname in qFeat.keys()]
-        qCAM = [int(self.pat.search(fname).groups()[1]) for fname in qFeat.keys()]
-        gPID = [int(self.pat.search(fname).groups()[0]) for fname in gFeat.keys()]
-        gCAM = [int(self.pat.search(fname).groups()[1]) for fname in gFeat.keys()]
+        qPID = [int(pid) for _, pid, _ in qLoader.trainSet]
+        qCAM = [int(cam) for _, _, cam in qLoader.trainSet]
+        gPID = [int(pid) for _, pid, _ in gLoader.trainSet]
+        gCAM = [int(cam) for _, _, cam in gLoader.trainSet]
         disMat = calDisForEva(qFeat, gFeat)
         return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
 

@@ -18,7 +18,7 @@ class dataReader(object):
 
     def __init__(self, imgPath, dataType='train', show=True):
         allF = [fname for fname in os.listdir(imgPath) if fname[-3:].lower() in ['jpg', 'png']]
-        self.allF = allF
+        self.allF = sorted(allF)
         self.imgPath = imgPath
         pat = re.compile(r'([-\d]+)_c(\d)')
         self.len = len(allF)
@@ -57,7 +57,7 @@ class dataReader(object):
 
 class knnCameraReader(object):
     def __init__(self, dataset, transform=None, knnIndex=None, distance=None):
-        self.dataset = dataset.trainSet
+        self.dataset = dataset.trainSet  # sorted
         self.root = dataset.imgPath
         self.transform = transform
         self.knnIndex = knnIndex
@@ -92,7 +92,7 @@ class knnCameraReader(object):
         allPid = []
         allCam = []
         fname, pid, camid = self.dataset[index]
-        pid = int(torch.rand(1) * 10000 + 10000)
+        pid = int(torch.rand(1) * 10000 + 10000)  # fake label
         if self.root is not None:
             fpath = os.path.join(self.root, fname)
 
