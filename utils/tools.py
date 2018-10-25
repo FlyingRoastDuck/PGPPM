@@ -274,6 +274,7 @@ class Evaluator(object):
         gPID = [int(pid) for _, pid, _ in gLoader.trainSet]
         gCAM = [int(cam) for _, _, cam in gLoader.trainSet]
         disMat = calDisForEva(qFeat, gFeat)
+        import ipdb;ipdb.set_trace()
         return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
 
 

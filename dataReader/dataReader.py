@@ -18,7 +18,7 @@ class dataReader(object):
 
     def __init__(self, imgPath, dataType='train', show=True):
         allF = [fname for fname in os.listdir(imgPath) if fname[-3:].lower() in ['jpg', 'png']]
-        self.allF = sorted(allF)
+        self.allF = allF
         self.imgPath = imgPath
         pat = re.compile(r'([-\d]+)_c(\d)')
         self.len = len(allF)

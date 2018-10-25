@@ -4,10 +4,14 @@ import warnings
 
 class Config(object):
     def __init__(self):
-        self.imgFolder = '/home/yfx/zzdEval/market/camVM60036'  # marketORIpath to images
-        self.realTrainFolder = '/home/yfx/zzdEval/market/train'
-        self.qFolder = '/home/yfx/zzdEval/market/query'  # FOR DEBUG
-        self.tFolder = '/home/yfx/zzdEval/market/test'
+        self.imgFolder = '/home/yfx/zzdEval/duke/camVD60048'  # marketORIpath to images
+        self.realTrainFolder = '/home/yfx/zzdEval/duke/train'
+        self.qFolder = '/home/yfx/zzdEval/duke/query'  # FOR DEBUG
+        self.tFolder = '/home/yfx/zzdEval/duke/test'
+        # self.imgFolder = '/home/yfx/zzdEval/market/camVM60036'  # marketORIpath to images
+        # self.realTrainFolder = '/home/yfx/zzdEval/market/train'
+        # self.qFolder = '/home/yfx/zzdEval/market/query'  # FOR DEBUG
+        # self.tFolder = '/home/yfx/zzdEval/market/test'
         self.modelSave = 'snapshots/PGPPM.pth'
         # basic param for model
         self.modelName = 'resnet50'
