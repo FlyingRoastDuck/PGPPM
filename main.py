@@ -18,9 +18,9 @@ def trainModel(**kwargs):
     model = nn.DataParallel(cpu2gpu(
         models.modelFact(name=opt.modelName, outChannel=dataset.numID, embDim=opt.fDim)))
     # train model
-    model = train(model, dataLoader=trainLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
-                  printFreq=opt.printFreq, weightDecay=opt.weightDecay, momentum=opt.momentum, lam=opt.lam,
-                  decayFreq=opt.decayFreq, lrDecay=opt.lrDecay, betas=[opt.beta1, opt.beta2])
+    train(model, dataLoader=trainLoader, solverType='SGD', lr=opt.lr, maxEpoch=opt.maxEpoch, snap=opt.snapFreq,
+          printFreq=opt.printFreq, weightDecay=opt.weightDecay, momentum=opt.momentum, lam=opt.lam,
+          decayFreq=opt.decayFreq, lrDecay=opt.lrDecay, betas=[opt.beta1, opt.beta2])
     print('training done')
 
 

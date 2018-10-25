@@ -134,7 +134,6 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
             print('snapshots saved!')
     # return new model
     torch.save(model.state_dict(), opt.modelSave)
-    return model
 
 
 def extractCNNfeature(dataLoader, model):

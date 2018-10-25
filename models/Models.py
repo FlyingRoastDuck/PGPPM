@@ -1,9 +1,13 @@
 # -*- coding: UTF-8 -*-
-from torchvision.models import *
+import torchvision.models as tModels
 import torch.nn as nn
 from torch.nn import functional as F
 
-supported = ['resnet18', 'resnet34', 'resnet50']
+supported = {
+    'resnet18': tModels.resnet50,
+    'resnet34': tModels.resnet34,
+    'resnet50': tModels.resnet50
+}
 
 
 class modelFact(nn.Module):
@@ -11,10 +15,10 @@ class modelFact(nn.Module):
         super(modelFact, self).__init__()
         self.modelName = name  # model name
         self.embDim = embDim  # for market, 2048
-        if not self.modelName.lower() in supported:
+        if not self.modelName.lower() in supported.keys():
             raise NotImplementedError
         else:
-            self.model = eval(name + '(pretrained=True)')
+            self.model = supported[name](pretrained=True)
             embFdim = self.model.fc.in_features  # 2048 in default
             # some layers
             self.feat = nn.Linear(embFdim, embDim)
