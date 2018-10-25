@@ -211,9 +211,10 @@ def extractF(dataLoader, model):
     model = model.train(False)
     feature = OrderedDict()
     for ii, (imgData, fname, pid, cams) in enumerate(dataLoader):
-        for imgD, name in zip(imgData, fname):
-            imgD = cpu2gpu(tensor2var(imgD)).unsqueeze(0)
-            feature[name] = var2tensor(model(imgD, outType='pooling5'))
+        imgData = cpu2gpu(tensor2var(imgData))
+        feats = model(imgData, outType='pooling5')
+        for feat, name in zip(gpu2cpu(var2tensor(feats)), fname):
+            feature[name] = feat
     print('-----* Feature Obtained *-----')
     return feature
 
@@ -249,8 +250,8 @@ def evaModel(disMat, qPID, gPID, qCam, gCam, cmcTop=(1, 5, 10, 20)):
     return cmcScores[0]
 
 
-def calDisForEva(qFeat, gFeat, qID, gID):
-    x, y = torch.cat([qFeat[f].unsqueeze(0) for f in qID]), torch.cat([gFeat[f].unsqueeze(0) for f in gID])
+def calDisForEva(qFeat, gFeat):
+    x, y = torch.cat([qFeat[f].unsqueeze(0) for f in qFeat.keys()], 0), torch.cat([gFeat[f].unsqueeze(0) for f in gFeat.keys()], 0)
     m, n = x.shape[0], y.shape[0]
     disMat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
              torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
@@ -273,7 +274,7 @@ class Evaluator(object):
         qCAM = [int(self.pat.search(fname).groups()[1]) for fname in qFeat.keys()]
         gPID = [int(self.pat.search(fname).groups()[0]) for fname in gFeat.keys()]
         gCAM = [int(self.pat.search(fname).groups()[1]) for fname in gFeat.keys()]
-        disMat = calDisForEva(qFeat, gFeat, qPID, gPID)
+        disMat = calDisForEva(qFeat, gFeat)
         return evaModel(disMat, qPID=qPID, gPID=gPID, qCam=qCAM, gCam=gCAM)
 
 
