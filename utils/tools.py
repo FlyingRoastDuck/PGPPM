@@ -95,7 +95,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 endT = time.time()
                 if jj % kwargs['printFreq'] == 0:
                     print(
-                        'epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}, elapsed time:{time}s'.format(
+                        'Epoch:[{epoch}/{maxEpoch}],Round:[{curJ}/{allJ}], id loss:{idloss}, elapsed time:{time}s'.format(
                             epoch=ii, maxEpoch=kwargs['maxEpoch'], curJ=jj, allJ=len(dataLoader),
                             idloss=lossCls, time=endT - startT))
         else:
@@ -119,7 +119,7 @@ def train(model, dataLoader, solverType='SGD', **kwargs):
                 endT = time.time()
                 if jj % kwargs['printFreq'] == 0:
                     print(
-                        'epoch:{epoch}/{maxEpoch},Round:[{curJ}/{allJ}], id loss:{idloss}, triplet loss:{triL}, elapsed time:{time}s'.format(
+                        'Epoch:{epoch}/{maxEpoch},Round:[{curJ}/{allJ}], id loss:{idloss}, triplet loss:{triL}, elapsed time:{time}s'.format(
                             epoch=ii,
                             maxEpoch=kwargs['maxEpoch'],
                             curJ=jj,
