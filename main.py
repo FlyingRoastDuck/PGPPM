@@ -56,7 +56,7 @@ def trainCamGAN(**kwargs):
     print('visdom active on port: {}'.format(opt.port))
     # generate training dataset
     trainSet = dataReader(opt.realTrainFolder, dataType='GAN')
-    trainLoader = Data.DataLoader(trainSet, batch_size=opt.batchSize, shuffle=True, num_workers=opt.numWorker)
+    trainLoader = Data.DataLoader(trainSet, batch_size=opt.batchSize//2, shuffle=True, num_workers=opt.numWorker)
     # G,D & optimizer
     modelG = nn.DataParallel(cpu2gpu(models.Generator(camDim=trainSet.numCams)))
     modelD = nn.DataParallel(cpu2gpu(models.Discriminator(imgSize=128, camDim=trainSet.numCams)))
@@ -64,8 +64,6 @@ def trainCamGAN(**kwargs):
     optiD = torch.optim.Adam(modelD.parameters(), lr=opt.lrD, betas=[opt.beta1, opt.beta2])
     clsLossFunc = nn.CrossEntropyLoss()
     recLoss = nn.L1Loss()
-    lossD = 0
-    lossG = 0
     # start training
     for ii in range(opt.maxGANEpoch):
         # update optimizer's lr
@@ -126,14 +124,13 @@ def trainCamGAN(**kwargs):
                 lossGfake = -torch.mean(fakeScore)
                 lossGRec = recLoss(recImg, srcData)
                 idtImg = modelG(srcData, realCam)
-                lossGIdt = recLoss(idtImg, srcData)
+                # lossGIdt = recLoss(idtImg, srcData)
                 lossGcam = clsLossFunc(fakeCamScore, fakeCamNum - 1)
-                lossG = lossGfake + opt.recLambda * lossGRec + opt.camLambda * lossGcam + opt.idtLambda * lossGIdt
+                lossG = lossGfake + 10 * lossGRec + lossGcam
                 optiG.zero_grad()
                 lossG.backward()
                 optiG.step()
-            # show all loss if reaches target step
-        print('lossD:{0:4.2f},lossG:{1:4.2f}'.format(lossD, lossG))
+                print('lossD:{0:4.2f},lossG:{1:4.2f}'.format(lossD.item(), lossG.item()))
         if opt.useVis:
             # convert cam
             bSize = srcData.shape[0]
