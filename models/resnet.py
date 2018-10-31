@@ -32,10 +32,10 @@ class ResNet(nn.Module):
         if self.hasEmb:
             self.feat = nn.Linear(inFeaDim, self.numFea)
             self.featBn = nn.BatchNorm1d(self.numFea)
-            init.kaiming_normal(self.feat.weight, mode='fan_out')
-            init.constant(self.feat.bias, 0)
-            init.constant(self.featBn.weight, 1)
-            init.constant(self.featBn.bias, 0)
+            init.kaiming_normal_(self.feat.weight, mode='fan_out')
+            init.constant_(self.feat.bias, 0)
+            init.constant_(self.featBn.weight, 1)
+            init.constant_(self.featBn.bias, 0)
         else:
             # Change the num_features to CNN output channels
             self.numFea = inFeaDim
@@ -43,8 +43,8 @@ class ResNet(nn.Module):
             self.drop = nn.Dropout(self.dropout)
         if self.numCls > 0:
             self.classifier = nn.Linear(self.numFea, self.numCls)
-            init.normal(self.classifier.weight, std=0.001)
-            init.constant(self.classifier.bias, 0)
+            init.normal_(self.classifier.weight, std=0.001)
+            init.constant_(self.classifier.bias, 0)
 
     def forward(self, x, outType=None):
         for name, module in self.model._modules.items():
