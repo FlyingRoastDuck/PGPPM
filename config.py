@@ -4,18 +4,24 @@ import warnings
 
 class Config(object):
     def __init__(self):
+        self.fakeFolder = '/home/yfx/zzdEval/duke/VD60048'  # real images for cam gan training
         self.imgFolder = '/home/yfx/zzdEval/duke/camVD60048'  # marketORIpath to images
         self.realTrainFolder = '/home/yfx/zzdEval/duke/train'
         self.qFolder = '/home/yfx/zzdEval/duke/query'  # FOR DEBUG
         self.tFolder = '/home/yfx/zzdEval/duke/test'
+        # self.camFolder = '/home/yfx/zzdEval/market/VM60036'
         # self.imgFolder = '/home/yfx/zzdEval/market/camVM60036'  # marketORIpath to images
         # self.realTrainFolder = '/home/yfx/zzdEval/market/train'
         # self.qFolder = '/home/yfx/zzdEval/market/query'  # FOR DEBUG
         # self.tFolder = '/home/yfx/zzdEval/market/test'
         self.modelSave = 'snapshots/PGPPM.pth'
+        self.modelGPath = 'snapshots/modelG.pth'
         # basic param for model
         self.modelName = 'resnet50'
         self.lr = 0.01
+        self.lrG = 0.0001
+        self.lrD = 0.0001
+        self.GDStep = 5
         self.margin = 0.3
         self.beta1 = 0.5
         self.beta2 = 0.999
@@ -26,6 +32,7 @@ class Config(object):
         self.triBatch = 30
         self.K = 50
         self.maxEpoch = 150
+        self.maxGANEpoch = 200
         self.startTrip = 100
         self.decayFreq = 20
         self.lrDecay = 0.1  # lr decay
@@ -34,6 +41,8 @@ class Config(object):
         self.numWorker = 8  # thread
         self.snapFreq = 60  # save freq
         self.printFreq = 1
+        self.port = 8889
+        self.useVis = False
 
     def parse(self, **kwargs):
         # user's config

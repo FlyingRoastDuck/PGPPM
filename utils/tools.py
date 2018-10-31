@@ -9,6 +9,8 @@ import sys
 from loss import TripletLoss
 from dataReader import *
 import torch.utils.data as Data
+import visdom
+from torchvision.utils import save_image
 
 sys.path.append('../')
 
@@ -16,7 +18,9 @@ from config import opt
 
 allFuncDes = {
     'trainModel': '-----* training model with source data *-----',
-    'evaluate': '-----* Test Model Adaptation *-----'
+    'evaluate': '-----* Test Model Adaptation *-----',
+    'trainCamGAN': '-----* Train Star GAN *-----',
+    'convertCam': '-----* Generating Images *-----'
 }
 
 
@@ -250,7 +254,8 @@ def evaModel(disMat, qPID, gPID, qCam, gCam, cmcTop=(1, 5, 10, 20)):
 
 
 def calDisForEva(qFeat, gFeat):
-    x, y = torch.cat([qFeat[f].unsqueeze(0) for f in qFeat.keys()], 0), torch.cat([gFeat[f].unsqueeze(0) for f in gFeat.keys()], 0)
+    x, y = torch.cat([qFeat[f].unsqueeze(0) for f in qFeat.keys()], 0), torch.cat(
+        [gFeat[f].unsqueeze(0) for f in gFeat.keys()], 0)
     m, n = x.shape[0], y.shape[0]
     disMat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
              torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
@@ -308,3 +313,55 @@ def description(func):
         func(**kwargs)
 
     return warpper
+
+
+def genVisdom(portNum):
+    return visdom.Visdom(port=portNum)
+
+
+def imshow(vis, genImg, epoch):
+    """
+    show results in visdom
+    :param genImg
+    :param vis:
+    :param epoch:
+    :return:
+    """
+    results = torch.FloatTensor()
+    for ii in range(len(genImg)):
+        # 4D tensor
+        dstImg = var2tensor(gpu2cpu(genImg[ii])).squeeze()  # single image, squeeze unnecessary dim
+        # flatten dstImg
+        camImg = torch.rand(3, dstImg.size(2), dstImg.size(3))
+        for jj in range(opt.camNum):
+            camImg = dstImg[jj, ...] if jj == 0 else torch.cat([camImg, dstImg[jj, ...]], dim=2)
+        results = camImg if ii == 0 else torch.cat([results, camImg], dim=1)
+    results = (results + 1) / 2
+    vis.image(results, opts=dict(title='Epoch{0:d}'.format(epoch)))
+
+
+def oneHot(labels, dim, useType='cam'):
+    """Convert label indices to one-hot vector"""
+    bSize = labels.size(0)
+    labels = gpu2cpu(var2tensor(labels))
+    out = torch.zeros(bSize, dim)
+    if useType == 'cam':
+        out[np.arange(bSize), labels.squeeze().long() - 1] = 1
+    else:
+        out[np.arange(bSize), labels.squeeze().long()] = 1
+    return out
+
+
+def updateGANLR(optimizer, isG, epoch):
+    if (epoch - opt.decayFreq) > 0:
+        lr = optimizer.param_groups[0]['lr']
+        if isG == 1:
+            lr -= opt.lrG / float(opt.maxEpoch - opt.lrDecayRate)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print('lrG declined to :{0:4.6f}'.format(lr))
+        else:
+            lr -= opt.lrD / float(opt.maxEpoch - opt.lrDecayRate)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print('lrD declined to :{0:4.6f}'.format(lr))
