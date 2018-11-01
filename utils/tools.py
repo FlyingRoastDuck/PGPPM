@@ -361,7 +361,7 @@ def updateGANLR(optimizer, isG, epoch):
                 param_group['lr'] = lr
             print('lrG declined to :{0:4.6f}'.format(lr))
         else:
-            lr -= opt.lrD / float(opt.maxEpoch - opt.lrDecayRate)
+            lr -= opt.lrD / float(opt.maxEpoch - opt.decayFreq)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
             print('lrD declined to :{0:4.6f}'.format(lr))
