@@ -5,8 +5,6 @@ import re
 import utils.transforms as T
 import numpy as np
 import torch
-from itertools import cycle, groupby, islice
-from collections import defaultdict
 
 
 class dataReader(object):
@@ -31,11 +29,9 @@ class dataReader(object):
             allCams.append(curCams)
         self.allIDs = allIDs
         self.allCams = allCams
-        self.numID = len(set(allIDs))
-        self.numCams = len(set(allCams))
+        self.numID = len(np.unique(allIDs))
         self.preprocess = None
         self.trainSet = []
-        imgSize = [128, 128]
         [self.trainSet.append([allF[i], allIDs[i], allCams[i]]) for i in range(len(allF))]
         # throw info
         if dataType == 'train':
@@ -55,13 +51,8 @@ class dataReader(object):
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-        elif dataType == 'GAN':
-            self.preprocess = T.Compose([
-                T.Resize((int(1.125 * imgSize[0]), int(1.125 * imgSize[1]))),
-                T.RandomCrop(imgSize),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            if show:
+                print('-----* Testing with {total} images *-----'.format(total=self.len))
 
 
 class knnCameraReader(object):
@@ -150,58 +141,3 @@ class knnCameraReader(object):
                 return allImg, allFname, allPid, allCam
 
         return allImg, allFname, allPid, allCam
-
-
-def groupByID(nameList):
-    results = defaultdict(list)
-    allItems = groupby(nameList, key=lambda x: int(x.split('_')[0]))
-    for ID, name in allItems:
-        results[ID].append(list(name))
-    return results
-
-
-class camReader(object):
-    def __init__(self, srcFolder, transformation=None):
-        # get name
-        allF = os.listdir(srcFolder)
-        imgSize = [128, 128]
-        groupedName = groupByID(allF)
-        # transformation of srcImg
-        if transformation is None:
-            self.trans = T.Compose([
-                T.Resize(imgSize),
-                T.ToTensor(),
-                T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        else:
-            self.trans = transformation
-        # labeler
-        pat = re.compile(u'([-\d]+)_c(\d)')
-        allCams = []
-        for ii in range(len(allF)):
-            _, curCams = map(int, pat.search(allF[ii]).groups())
-            allCams.append(curCams)
-        self.camNum = len(set(allCams))
-        camLaber = cycle(range(self.camNum))
-        # label each fake image with camera
-        fName, tarCam = [], []
-        for ID, names in groupedName.items():
-            # convert names to single list
-            curRes = []
-            for ii in range(len(names)): curRes += names[ii]
-            fName += curRes
-            tarCam += list(islice(camLaber, 0, len(curRes), 1))
-        self.allName = fName
-        self.tarCam = tarCam
-        self.imgNum = len(self.allName)
-        self.srcFolder = srcFolder
-        # number of ID
-        self.idNum = max(list(map(lambda x: int(x.split('_')[0]), allF))) + 1
-
-    def __getitem__(self, index):
-        imgName = self.allName[index]  # ori name
-        srcImg = self.trans(Image.open(os.path.join(self.srcFolder, imgName)))
-        ID = int(imgName.split('_')[0])
-        return srcImg, self.tarCam[index], ID
-
-    def __len__(self):
-        return self.imgNum
