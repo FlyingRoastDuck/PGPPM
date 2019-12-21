@@ -191,7 +191,10 @@ def knnIndex(feat, K, camLabs):
     for i in range(allNum):
         # k-reciprocal neighbors
         fkIndex = initRank[i, :K + 1]
-        bkIndex = initRank[fkIndex, :K + 1]
+        if len(set(camLabs.numpy().astype(int))) > 2:
+            bkIndex = initRank[(fkIndex, :K + 1)]
+        else:
+            bkIndex = noCamRank[(fkIndex, :K + 1)]
         fi = np.where(bkIndex == i)[0]
         kreIndex = fkIndex[fi]
 
